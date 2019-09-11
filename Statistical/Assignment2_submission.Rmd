@@ -7,29 +7,418 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(mgcv)
+library(rnoaa)
 ```
+
+# To do:
+
+2.2 Check when the weather data is updated -
+2.4 What exactly is asked - statistical methods?
+3.6 dont know
+
+
+
+
 # Task 1 Source Weather Data
+
+## 1. Which data source do you plan to use? Justify your decision.
+The original data stems from weather stations. They are usually run by the local government. However the collection and storing of the data can be done by different providers. I plan to use NOAA, the National Centers for Environmantal Information, a US-based data center. AlsoI gather data from the Autralian Bureau of Meteorology. 
+
+Additionaly the data from last assignment, the ED-Demand stems from the Autralian government website. 
+Generally government run databases are a good source, since they are free and reliable.
+
+It is asked to get data to predict the ED-Demand. The time period to predict is not given. I assume that the task is to predict the demand for the next day.
+
+After a quick research online, the relevant feature preliminary related to temeperature. ALso I included data about the solar exposure. Originaly I wanted to include data about air pollution as well. But only data about emissions of facilities was available. Therefore I didnt use that. 
+
+## 2.
+
+```{r noaa_data}
+# library for access to noaa
+
+
+# set key
+options(noaakey = "aeiJGRXtNXdMuIkEVeqOvciRvsdBbIUg")
+
+# get the id for perth
+x <- ncdc_locs(locationcategoryid='CITY', sortfield='name', sortorder='desc',limit = 1000)$data
+perth <- x[x$name=="Perth, AS",]
+# id:	CITY:AS000008
+
+# get the weatherstations and select the one with the highest coverage
+stations <- ncdc_stations(datasetid='GHCND',
+                          locationid='CITY:AS000008')
+#x perth airport GHCND:ASN00009021
+
+# check which datasets have perth data
+ncdc_datasets(locationid = "CITY:AS000008")
+# GHCND is here the only source
+
+# the possible data are max, min, avg and precipitation
+max_temp_daily <- ncdc(datasetid='GHCND',
+                       stationid='GHCND:ASN00009021',
+                       datatypeid='TMAX',
+                       startdate = '2013-07-01',
+                       enddate = '2014-06-30',
+                       limit=500)$data
+min_temp_daily <- ncdc(datasetid='GHCND',
+                       stationid='GHCND:ASN00009021',
+                       datatypeid='TMIN',
+                       startdate = '2013-07-01',
+                       enddate = '2014-06-30',
+                       limit=500)$data
+avg_temp_daily <- ncdc(datasetid='GHCND',
+                       stationid='GHCND:ASN00009021',
+                       datatypeid='TAVG', 
+                       startdate = '2013-07-01',
+                       enddate = '2014-06-30',
+                       limit=500)$data
+prec_daily <-ncdc(datasetid='GHCND',
+                  stationid='GHCND:ASN00009021',
+                  datatypeid='PRCP',
+                  startdate = '2013-07-01',
+                  enddate = '2014-06-30', 
+                  limit=500)$data
+
+# change date and select the important variables
+
+change_noaadate <- function(df){
+  require(tidyverse)
+  df_2 <- df %>%
+    dplyr::mutate(date = as.Date(substr(date,1,10)))%>%
+    select(date,value)
+  names(df_2) <- c("date",df$datatype[1])
+  return(df_2)
+}
+
+max_temp_daily <- change_noaadate(max_temp_daily)
+min_temp_daily <- change_noaadate(min_temp_daily)
+avg_temp_daily <- change_noaadate(avg_temp_daily)
+prec_daily <- change_noaadate(prec_daily)
+
+dim(max_temp_daily)
+
+```
+
+In the 4 dataframes, there are in each 365 rows. I chose the time period to be the same as in the ed-demand data, which is 2013-07-01 to 2014-06-30. 
+
+
+ 
+
+# Task 2: Model planning
+
+## 1. 
+The model could play an important role for hospitals to control the ED-demand. Usually people have to wait for a long time till they get treatment at an hospital emergency departement. With an accurate prediction about the demand in hospitals, people could see in which hospital the demand is higher than in others and the patient could better chose where to go to minimise waiting time. 
+
+Not only is it a problem, that patients are not well allocated, but also that often there are too many of them at the ED, who are not as seriously in danger that they could just make an appointment with a doctor next week. If people are more aware of the possible waiting times at ED, some of them might wait and make an normal appointment. 
+
+Finally, this predictions can also be valuable for the hospitals personal planning. To better plan when it is suitable for nurses etc to take vacations.
+
+Overall this model can be used by the people for choosing the hospital with the least waiting time, or they see that theyjust wait for an appointment and finally also for personal planning at hospitals. 
+
+
+## 2.
+As I have outlined in 1. There might be 2 applications. One when the possible patient tries to decide to go to which hospital and another when the hospitals want to make their planning more efficient. For the planning, a prediction overa longer period of time is helpful. But for the possible patient, a daily prediction is what he wants. 
+
+So I want to focus only on the daily prediction for the patient. In this case the ED-Demand, the Attendance is the dependent variable. The predictors are the climate data from the day before. 
+
+It seems that for a daily prediction, the NOAA database is not suitable
+
+## 3.
+
+One could assumee that climate data shows a reliable pattern over the course over a year. However, with increasing changes due to the climate change, this might not be true any longer. 
+
+## 4.
+The dependent variable is numeric. Therefore, it will be a regression model. By starting at a simple linear regression one can go on to more comoplex models if necessary
+
+
+
+# Task 3
+## 1
+
+### ED-Data
+
+```{r ed_data, message=FALSE, warning=FALSE}
+
+# code from assignmnet
+ed_link <- "http://bit.ly/2nkCUEh" #changed to link
+
+top_row <- read_csv(ed_link, col_names = FALSE, n_max = 1)
+second_row <- read_csv(ed_link, n_max = 1)
+
+column_names <- second_row %>% 
+  unlist(., use.names=FALSE) %>% 
+  make.unique(., sep = "__") # double underscore
+
+column_names[2:8] <- str_c(column_names[2:8], '0', sep='__')
+
+daily_attendance <- 
+  read_csv(ed_link, skip = 2, col_names = column_names,na = "N/A")
+
+
+```
+
+
+```{r tidy_ed}
+# tidy the data
+daily_attendance_tidy <-  daily_attendance %>%
+  gather(-Date, key = key, value = value)%>% # gather all collumns except date
+  tidyr::extract(key, c("category", "hospital_number"), "(\\w*)(\\d)", convert = TRUE)%>% # extract the hospital numbers
+  mutate(category = str_sub(category,1,-3))%>%
+       #  value = replace_na(value,0))%>%
+  spread(category, value)%>%
+  mutate(Hospital = case_when(hospital_number == 0 ~"Royal Perth Hospital",
+                              hospital_number == 1 ~"Fremantle Hospital",
+                              hospital_number == 2 ~"Princess Margaret Hospital For Children",
+                              hospital_number == 3 ~"King Edward Memorial Hospital For Women",
+                              hospital_number == 4 ~"Sir Charles Gairdner Hospital",
+                              hospital_number == 5 ~"Armadale/Kelmscott District Memorial Hospital",
+                              hospital_number == 6 ~"Swan District Hospital",
+                              hospital_number == 7 ~"Rockingham General Hospital",
+                              hospital_number == 8 ~"Joondalup Health Campus"))%>%
+  dplyr::select(-hospital_number) # remove column
+```
+
+
+```{r}
+# replace all NAs in df with 0 - justufucation see Ass 1
+daily_attendance_tidy[is.na(daily_attendance_tidy)] <- 0
+# see if any NAs left
+table(is.na(daily_attendance_tidy))
+```
+
 
 
 
 ```{r}
-# access the data
-library(curl)
+# to obtain the list of hospitals
+set.seed(123)# to get the same results
+hospitals <- top_row %>%
+  select_if(~!is.na(.))
 
-# new handle to set the token
-h = new_handle()
+print(sample(as.vector(hospitals),size = 1))
+```
+Princess Margaret Hospital For Children is the selected hospital.
+I assume that the next step is to filter the ED-date for this particlular hospital
 
-handle_setheaders(h, "token" = "aeiJGRXtNXdMuIkEVeqOvciRvsdBbIUg")
+```{r}
+Margaret_ed <- daily_attendance_tidy%>%
+  filter(Hospital == "Princess Margaret Hospital For Children")%>%
+  mutate(date = dmy(Date))
 
-# fetch the data
-req_2 <- curl_fetch_memory("http://www.ncdc.noaa.gov/cdo-web/api/v2/data?datasetid=PRECIP_HLY&locationid=CITY:Perth,AU&startdate=2013-01-01&enddate=2014-01-01", handle = h)
+```
 
 
-# transform to dataframe to work with 
-library(jsonlite)
-jsonfile <- jsonlite::prettify(rawToChar(req_2$content))
-df <- fromJSON(jsonfile)$results
+
+
+
+## 2. 
+```{r}
+
+
+fit_linear <- lm(Attendance~date, data = Margaret_ed)
+summary(fit_linear)
+plot(fit_linear)
+```
+From the residualplot, it doesn't look that bad. However I dont know whether poly 4 is asked...
+
+Without poly 4, clearly there are some seasonal deviances visible.
+
+## 3. 
+```{r}
+fit_gam <- gam(Attendance~s(as.numeric(date), k = 50),
+               family = Gamma(link=log),
+               data = Margaret_ed)
+summary(fit_gam)
+plot(fit_gam, residuals = TRUE)
+
+plot(residuals.gam(fit_gam))
+```
+There seems some heteroskedasticity. With increasing index, the variance gets smaller
+
+
+
+
+
+## 4.
+
+```{r}
+Margaret_ed_week <- Margaret_ed%>%
+  mutate(weekd = as.factor(weekdays(date)),
+         num_date  =as.numeric(date))
+
+str(Margaret_ed_week)
+
+fit_gam_week <- gam(Attendance ~s(num_date, by  = weekd) +weekd,
+                    data = Margaret_ed_week)
+summary(fit_gam_week)
+
+AIC(fit_gam,fit_gam_week)
+
+```
+The AIC reveals that the second model, fit_gam_week has a better fit than the first model. 
+
+
+
+## 5. 
+
+
+```{r}
+plot(fit_gam_week, residuals = T)
+plot(fit_gam_week$residuals)
+```
+still decreasing variance
+
+## 6. 
+I dont know...
+
+
+
+
+
+# Task 4 
+
+## 1. The Definition of EHF
+The EHF is calculated in multiple steps and tries to capture and indicate heatwaves.
+
+First step is to calculate the excess heat indndices:
+
+$EHI_{sig} = (T_i+T_{i+1}+T_{i+2})/3-T_{95}\;,where \;T\ is \;Daily\;Mean\;Temperature\; and \;T_{95} \;95 \; percentile$
+and:
+$EHI_{accl}=(T_i+T_{i+1}+T_{i+2})/3-(T_{i-1}+...+T_{i-30})/30 $
+
+The EFH can be calculated as followed:
+
+$EHF = EHI_{sign}*max(1,EHI_{accl})$
+or
+$EHF = max(0,EHI_{sign})*max(1,EHI_{accl})$
+
+
+
+
+```{r merge_data}
+margaret_weather <- Margaret_ed_week%>%
+  mutate(date = dmy(Date))%>%
+  left_join(max_temp_daily,by = "date")%>%
+  left_join(min_temp_daily,by = "date")%>%
+  left_join(avg_temp_daily,by = "date")%>%
+  left_join(prec_daily,by = "date")%>%
+  arrange(date)
+
+
+calc_ehf <- function(df){
+  require(zoo)
+  df$EHF <- 1
+  
+  # EHI_sig
+  t_95 <- quantile(margaret_weather$TAVG,.95) # calculate 95 percentile
+  # check to get the whole dataset of avg temperature to calculate it
+  rolled_mean_f <- c(rollmean(df$TAVG,3),NA,NA) #= first try add NA at the end
+  EHI_sig <- rolled_mean_f-t_95
+  
+  # EHI_accl
+  rolled_mean_b <- c(rep(NA,29), rollmean(df$TAVG[length(df$TAVG):1],30))
+ EHI_accl <- rolled_mean_f/rolled_mean_b
+ for (i in 1:365){
+  df$EHF[i] <- max(0,EHI_sig[i])*max(1,EHI_accl[i])
+ }
+ return(df) 
+}
+margaret_weather_EHF <- calc_ehf(margaret_weather)
+
+ggplot(margaret_weather_EHF, aes(x = date, y = EHF))+geom_line()
+```
+
+## Task 4.2 
+
+```{r}
+
+fit_gam_ehf <- gam(Attendance ~s(num_date, by  = weekd) +weekd+s(EHF),
+                    data = margaret_weather_EHF)
+summary(fit_gam_ehf)
+
+AIC(fit_gam_week,fit_gam_ehf)
 
 
 ```
+
+
+The EHF increases the fit again. The model performs better and can better explain the variation, as the AIC and the adj R-square confirm. 
+
+
+
+
+
+
+```{r, ed_weather}
+ed_weather_data%>%
+  mutate(week = strftime(date, format = "%V"))%>%
+  group_by(week)%>%
+  summarize(weekly_att=sum(Attendance))%>%
+  ggplot(aes(week,weekly_att, group =1))+
+  geom_line()+
+  theme(axis.text.x = element_text(angle = 45, size = 10))
+  
+```
+
+
+## Task 4.3
+
+```{r sun_data}
+sun_daily <- read_csv("C:/Users/gwehrm/Documents/Repos/Deakin/Statistical/Data/IDCJAC0016_009021_1800_Data.csv")
+
+sun_daily <- sun_daily%>%
+  unite(date ,c(Year,Month,Day), sep = "-",remove = T)%>%
+  mutate(date = as.Date(date))%>%
+  filter(between(date, as.Date("2013-07-01"),as.Date("2014-06-30")))%>%
+  select(date, `Daily global solar exposure (MJ/m*m)`)%>%
+  rename(solar = `Daily global solar exposure (MJ/m*m)`)
+
+margaret_weather_s <- Margaret_ed_week%>%
+  mutate(date = dmy(Date))%>%
+  left_join(max_temp_daily,by = "date")%>%
+  left_join(min_temp_daily,by = "date")%>%
+  left_join(avg_temp_daily,by = "date")%>%
+  left_join(prec_daily,by = "date")%>%
+  left_join(sun_daily, by = "date")%>%
+  arrange(date)
+
+margaret_weather_s <- calc_ehf(margaret_weather_s)
+
+
+fit_gam_s <- gam(Attendance ~s(num_date, by  = weekd) +weekd+s(EHF)+s(solar)+s(TMIN),
+                    data = margaret_weather_s)
+summary(fit_gam_s)
+
+AIC(fit_gam_ehf,fit_gam_s)
+
+
+
+```
+
+# Task 5
+## 1 limitations of historical data
+
+The Example of the EHF can show clearly some limitaitons. With increasing temperature more of the data will be labelled as heatwave, since as comparison historical data is used. Meanwhile people could adapt themselves to the increased heat and be therefore less sensitive to the EHF callculated with historical fata.
+
+## 2. 
+Well originally the task was to predict the ED-demand. But given multiple factors, the understanding of the process should be more in the focus. One reason is that only data for a year is available. Also, the data is from 2014. As said in 1., a limitation of historical data is that the behaviour and the relation can change. The data is nearly six years old and therefore not suitable to use for predictions in 2019/2020.
+
+But insights forom this models can be used to the incorporate features in the prediction model.
+
+## 3.
+No not overall. The original task was to make predictions. None of it was done here. But the understanding og the relationship between the ED-demand and the temperature increased. It could be deduced that:
+* Weekly cycles
+* Yearly cycles
+* EHF big unfluence 
+
+
+
+
+
+
+
 
