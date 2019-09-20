@@ -11,17 +11,19 @@ library(tidyverse)
 library(lubridate)
 library(mgcv)
 library(rnoaa)
+
 ```
 
 # To do:
 
 2.2 Check when the weather data is updated -
-2.4 What exactly is asked - statistical methods?
-3.6 dont know
+2.4 What exactly is asked - statistical methods? What is exactly used to estimate the parameters in GAMs 
+3.4 report through coefficient estimates or plots?
+3.6 but dont we specify before as well ordered weekdays?
+tidy output with broom
+3.6 check out what by does 
 
-
-
-
+ 
 # Task 1 Source Weather Data
 
 ## 1. Which data source do you plan to use? Justify your decision.
@@ -50,7 +52,7 @@ perth <- x[x$name=="Perth, AS",]
 
 # get the weatherstations and select the one with the highest coverage
 stations <- ncdc_stations(datasetid='GHCND',
-                          locationid='CITY:AS000008')
+                          locationid='CITY:AS000008')$data
 #x perth airport GHCND:ASN00009021
 
 # check which datasets have perth data
@@ -132,12 +134,12 @@ It seems that for a daily prediction, the NOAA database is not suitable
 One could assumee that climate data shows a reliable pattern over the course over a year. However, with increasing changes due to the climate change, this might not be true any longer. 
 
 ## 4.
-The dependent variable is numeric. Therefore, it will be a regression model. By starting at a simple linear regression one can go on to more comoplex models if necessary
+The dependent variable is numeric. Therefore, it will be a regression problem. By starting at a simple linear regression one can go on to more comoplex models if necessary. The methods used to estimate the parameters are in a linear regression the Ordinary Least Squares (OLS). When we would go on to the Generalized Addiditves Models, the method used for the parameter estimation would be the IRLS. 
 
 
 
 # Task 3
-## 1
+## 1.
 
 ### ED-Data
 
@@ -180,17 +182,9 @@ daily_attendance_tidy <-  daily_attendance %>%
                               hospital_number == 7 ~"Rockingham General Hospital",
                               hospital_number == 8 ~"Joondalup Health Campus"))%>%
   dplyr::select(-hospital_number) # remove column
-```
-
-
-```{r}
-# replace all NAs in df with 0 - justufucation see Ass 1
+# replace all NAs in df with 0 - justification see Ass 1
 daily_attendance_tidy[is.na(daily_attendance_tidy)] <- 0
-# see if any NAs left
-table(is.na(daily_attendance_tidy))
 ```
-
-
 
 
 ```{r}
@@ -199,10 +193,11 @@ set.seed(123)# to get the same results
 hospitals <- top_row %>%
   select_if(~!is.na(.))
 
+# print random Hospital
 print(sample(as.vector(hospitals),size = 1))
 ```
 Princess Margaret Hospital For Children is the selected hospital.
-I assume that the next step is to filter the ED-date for this particlular hospital
+I assume that the next step is to filter the ED-date for this particlular hospital and continue with that data the assignment.
 
 ```{r}
 Margaret_ed <- daily_attendance_tidy%>%
@@ -217,40 +212,60 @@ Margaret_ed <- daily_attendance_tidy%>%
 
 ## 2. 
 ```{r}
-
-
-fit_linear <- lm(Attendance~date, data = Margaret_ed)
+require(lettuce)
+fit_linear <- lm(Attendance~date, data = Margaret_ed) 
+# linear regression
 summary(fit_linear)
+
+Margaret_ed%>%
+  ggplot(aes(x = date,y = Attendance))+
+  geom_point()+
+  geom_smooth(method = "lm")
+
+# 
+# res <- stack(data.frame(Observed = Margaret_ed$Attendance , Predicted = fitted(fit_linear)))
+# res <- cbind(res, x = rep(Margaret_ed$date, 2))
+# 
+# require("lattice")
+# 
+# xyplot(values ~ x, data = res, group = ind, auto.key = TRUE)
+# 
+plot(fit_linear$residuals)
+# 
+
 plot(fit_linear)
 ```
-From the residualplot, it doesn't look that bad. However I dont know whether poly 4 is asked...
+From the regression output, It can be seen that the linear fit is really bad. Only 0.3% of the variation can be explained. by "date".
 
-Without poly 4, clearly there are some seasonal deviances visible.
+The residualplots indicate that there is some seasonality that we are not capturing with this linear fit. So this linear regression is defenitely not good enough. A next step could be, if we want to continue with the linear models, to incroporate polynomials, that give more flexibility.
+```{r}
+fit_poly <- lm(Attendance~poly(date,4), data = Margaret_ed) 
+summary(fit_poly)
+plot(fit_poly)
+```
+The fit increased already dramatically. A vote for more flexibility.
+
 
 ## 3. 
 ```{r}
 fit_gam <- gam(Attendance~s(as.numeric(date), k = 50),
-               family = Gamma(link=log),
                data = Margaret_ed)
 summary(fit_gam)
 plot(fit_gam, residuals = TRUE)
-
-plot(residuals.gam(fit_gam))
+gam.check(fit_gam)
 ```
-There seems some heteroskedasticity. With increasing index, the variance gets smaller
-
-
-
+The fit increased and much more can be explained. The adjusted R-sqared is 0.412. But by just looking atthe residuals, it cannot be said that there is something way off - bad
+family = norma, since normally distributed value...
 
 
 ## 4.
-
+ 
 ```{r}
 Margaret_ed_week <- Margaret_ed%>%
   mutate(weekd = as.factor(weekdays(date)),
          num_date  =as.numeric(date))
 
-str(Margaret_ed_week)
+# str(Margaret_ed_week)
 
 fit_gam_week <- gam(Attendance ~s(num_date, by  = weekd) +weekd,
                     data = Margaret_ed_week)
@@ -258,23 +273,56 @@ summary(fit_gam_week)
 
 AIC(fit_gam,fit_gam_week)
 
+
+plot(fit_gam_week, residuals = T)
+
 ```
 The AIC reveals that the second model, fit_gam_week has a better fit than the first model. 
 
-
+since as.factor, we stil lhave some kind of order 
 
 ## 5. 
 
 
 ```{r}
 plot(fit_gam_week, residuals = T)
-plot(fit_gam_week$residuals)
+gam.check(fit_gam_week)
 ```
-still decreasing variance
+the residuals still look nicely distributed. 
+
 
 ## 6. 
-I dont know...
 
+```{r}
+# add the ordinal  and numeric
+Margaret_ed_week <- Margaret_ed%>%
+   mutate(weekd = as.character(weekdays(date)),
+         weekd_or = factor(weekdays(date), order = T, levels = c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")),
+         weekd_nu = lubridate::wday(date),
+         num_date  =as.numeric(date))
+
+# character
+fit_gam_week <- gam(Attendance ~s(num_date) +weekd,
+                    data = Margaret_ed_week)
+summary(fit_gam_week)
+
+# ordinal
+fit_gam_week_o <- gam(Attendance ~s(num_date, by  = weekd_or) +weekd_or,
+                    data = Margaret_ed_week)
+summary(fit_gam_week_o)
+
+# numeric
+fit_gam_week_n <- gam(Attendance ~s(num_date, by  = weekd_nu) +weekd_nu,
+                    data = Margaret_ed_week)
+summary(fit_gam_week_n)
+
+
+
+AIC(fit_gam_week,fit_gam_week_o,fit_gam_week_n)
+
+```
+There is a big difference in between the models. The presumably unordered model is the best. But why?
+It makes sense that the ordered and the factors are similar. THey have the same order and with the structure and flexibility of gams, both capture the same structure. Therefore they are similar. But why is the first one the best? Does it allow the highest flexibility? 
 
 
 
@@ -297,24 +345,83 @@ or
 $EHF = max(0,EHI_{sign})*max(1,EHI_{accl})$
 
 
+Knowing this, additional data is required:
+* 30 additional days, so start is now 2013-06-01
+* years 1971–200 to caclulate $T_{95}$
 
 
 ```{r merge_data}
-margaret_weather <- Margaret_ed_week%>%
+
+calc_t95 <- function(timesspan){
+  require(rnoaa)
+  avg_temp <-  c()
+  for (i in timesspan){
+    start <-  paste0(i,"-01-01")
+    end <-  paste0(i,"-12-31")
+    
+    avg_temp_daily <- ncdc(datasetid='GHCND',
+                         stationid='GHCND:ASN00009021',
+                         datatypeid='TAVG', 
+                         startdate = start,
+                         enddate = end,
+                         limit=500)$data
+    if (length(avg_temp_daily)==0){
+      next
+    }
+    avg_temp <- append(avg_temp, avg_temp_daily$value)
+  }
+  return(quantile(avg_temp,.95))
+  }
+
+
+# the possible data are max, min, avg and precipitation
+max_temp_daily_long <- ncdc(datasetid='GHCND',
+                       stationid='GHCND:ASN00009021',
+                       datatypeid='TMAX',
+                       startdate = '2013-07-01',
+                       enddate = '2014-06-30',
+                       limit=500)$data
+min_temp_daily_long <- ncdc(datasetid='GHCND',
+                       stationid='GHCND:ASN00009021',
+                       datatypeid='TMIN',
+                       startdate = '2013-07-01',
+                       enddate = '2014-06-30',
+                       limit=500)$data
+avg_temp_daily_long <- ncdc(datasetid='GHCND',
+                       stationid='GHCND:ASN00009021',
+                       datatypeid='TAVG', 
+                       startdate = '2013-07-01',
+                       enddate = '2014-06-30',
+                       limit=500)$data
+prec_daily_long <-ncdc(datasetid='GHCND',
+                  stationid='GHCND:ASN00009021',
+                  datatypeid='PRCP',
+                  startdate = '2013-07-01',
+                  enddate = '2014-06-30', 
+                  limit=500)$data
+
+
+max_temp_daily_long <- change_noaadate(max_temp_daily_long)
+min_temp_daily_long <- change_noaadate(min_temp_daily_long)
+avg_temp_daily_long <- change_noaadate(avg_temp_daily_long)
+prec_daily_long <- change_noaadate(prec_daily_long)
+
+
+margaret_weather_long <- Margaret_ed_week%>%
   mutate(date = dmy(Date))%>%
-  left_join(max_temp_daily,by = "date")%>%
-  left_join(min_temp_daily,by = "date")%>%
-  left_join(avg_temp_daily,by = "date")%>%
-  left_join(prec_daily,by = "date")%>%
+  left_join(max_temp_daily_long,by = "date")%>%
+  left_join(min_temp_daily_long,by = "date")%>%
+  left_join(avg_temp_daily_long,by = "date")%>%
+  left_join(prec_daily_long,by = "date")%>%
   arrange(date)
 
 
-calc_ehf <- function(df){
+calc_ehf <- function(df,timespan){
   require(zoo)
   df$EHF <- 1
   
   # EHI_sig
-  t_95 <- quantile(margaret_weather$TAVG,.95) # calculate 95 percentile
+  t_95 <- calc_t95(timespan) # calculate 95 percentile
   # check to get the whole dataset of avg temperature to calculate it
   rolled_mean_f <- c(rollmean(df$TAVG,3),NA,NA) #= first try add NA at the end
   EHI_sig <- rolled_mean_f-t_95
@@ -327,9 +434,18 @@ calc_ehf <- function(df){
  }
  return(df) 
 }
-margaret_weather_EHF <- calc_ehf(margaret_weather)
+```
+
+
+
+```{r}
+
+timesspan <- 1970:2000
+
+margaret_weather_EHF <- calc_ehf(margaret_weather_long, timesspan)
 
 ggplot(margaret_weather_EHF, aes(x = date, y = EHF))+geom_line()
+
 ```
 
 ## Task 4.2 
@@ -348,6 +464,7 @@ AIC(fit_gam_week,fit_gam_ehf)
 
 The EHF increases the fit again. The model performs better and can better explain the variation, as the AIC and the adj R-square confirm. 
 
+What is the coefficient? 
 
 
 
