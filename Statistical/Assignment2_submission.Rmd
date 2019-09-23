@@ -11,6 +11,7 @@ library(tidyverse)
 library(lubridate)
 library(mgcv)
 library(rnoaa)
+library(zoo)
 
 ```
 
@@ -26,22 +27,19 @@ tidy output with broom
  
 # Task 1 Source Weather Data
 
-## 1. Which data source do you plan to use? Justify your decision.
-The original data stems from weather stations. They are usually run by the local government. However the collection and storing of the data can be done by different providers. I plan to use NOAA, the National Centers for Environmantal Information, a US-based data center. AlsoI gather data from the Autralian Bureau of Meteorology. 
+## 1. Which data source do you plan to use? Justify your decision.  
 
-Additionaly the data from last assignment, the ED-Demand stems from the Autralian government website. 
-Generally government run databases are a good source, since they are free and reliable.
+The original data stems from weather stations. They are usually run by the local government. However the collection and storing of the data can be done by different providers. I plan to use NOAA, the National Centers for Environmantal Information, an US-based data center. Also, I collect data from the Autralian Bureau of Meteorology. 
 
-It is asked to get data to predict the ED-Demand. The time period to predict is not given. I assume that the task is to predict the demand for the next day.
+Additionaly, the data from last assignment, the ED-Demand stems from the Autralian government website. 
 
-After a quick research online, the relevant feature preliminary related to temeperature. ALso I included data about the solar exposure. Originaly I wanted to include data about air pollution as well. But only data about emissions of facilities was available. Therefore I didnt use that. 
+Generally government run databases are a good source, since they are free and reliable.  
 
 ## 2.
 
+The relevant time period is not really defined. Therefore I assume the same time period as in Assignment 1.
+
 ```{r noaa_data}
-# library for access to noaa
-
-
 # set key
 options(noaakey = "aeiJGRXtNXdMuIkEVeqOvciRvsdBbIUg")
 
@@ -104,39 +102,42 @@ prec_daily <- change_noaadate(prec_daily)
 dim(max_temp_daily)
 
 ```
+## 3.
 
-In the 4 dataframes, there are in each 365 rows. I chose the time period to be the same as in the ed-demand data, which is 2013-07-01 to 2014-06-30. 
+
+Each of the four (three for the daily temperatures, one for precipitaition) dataframes has 365 rows. I chose the time period to be the same as in the ed-demand data, which is 2013-07-01 to 2014-06-30. During the assignment this could also change, but for now this is what I'm working with.
 
 
  
 
 # Task 2: Model planning
 
-## 1. 
-The model could play an important role for hospitals to control the ED-demand. Usually people have to wait for a long time till they get treatment at an hospital emergency departement. With an accurate prediction about the demand in hospitals, people could see in which hospital the demand is higher than in others and the patient could better chose where to go to minimise waiting time. 
+## 1.  
 
-Not only is it a problem, that patients are not well allocated, but also that often there are too many of them at the ED, who are not as seriously in danger that they could just make an appointment with a doctor next week. If people are more aware of the possible waiting times at ED, some of them might wait and make an normal appointment. 
+The model could play an important role for hospitals to control the ED-demand. Usually people have to wait for a long time till they get treatment at a hospital emergency departement. With an accurate prediction about the demand in hospitals, people could see in which hospital the demand is higher than in others and the patient could better chose where to go to minimise/optimise waiting time. 
 
-Finally, this predictions can also be valuable for the hospitals personal planning. To better plan when it is suitable for nurses etc to take vacations.
+Not only is it a problem, that patients are not well allocated, but also that often there are too at the ED, who are not seriously in danger. They could just make an appointment with a doctor next week. If people are more aware of the possible waiting times at ED, some of them might wait and make an normal appointment. 
+
+Finally, this predictions can also be valuable for the hospitals personal planning. To better plan when it is suitable for nurses etc to take vacations/trainings and when there is high demand.
 
 Overall this model can be used by the people for choosing the hospital with the least waiting time, or they see that theyjust wait for an appointment and finally also for personal planning at hospitals. 
 
 
-## 2.
-As I have outlined in 1. There might be 2 applications. One when the possible patient tries to decide to go to which hospital and another when the hospitals want to make their planning more efficient. For the planning, a prediction overa longer period of time is helpful. But for the possible patient, a daily prediction is what he wants. 
+## 2. 
 
-So I want to focus only on the daily prediction for the patient. In this case the ED-Demand, the Attendance is the dependent variable. The predictors are the climate data from the day before. 
+As I have outlined in 1. There might be 2 applications. One, when the possible patient tries to decide to go to which hospital and another when the hospitals wants to make their planning more efficient. For the planning in a hospital, a prediction over a longer period of time is helpful. But for the possible patient, a daily prediction is what he wants. 
+
+In this assignment, I want to focus only on the daily prediction for the patient. In this case the ED-Demand, the Attendance is the dependent variable. The predictors are the climate data from the day before. 
 
 It seems that for a daily prediction, the NOAA database is not suitable
 
 ## 3.
 
-One could assumee that climate data shows a reliable pattern over the course over a year. However, with increasing changes due to the climate change, this might not be true any longer. 
+It is known that climate data shows a reliable seasonality over the course over a year (the seasons). However, with increasing changes due to the climate change, this might not be true any longer. More and more extreme weather events happen. So there is no guarantee that in the future we will observe the same seasonalities/patterns. 
 
-## 4.
+## 4. 
+
 The dependent variable is numeric. Therefore, it will be a regression problem. By starting at a simple linear regression one can go on to more comoplex models if necessary. The methods used to estimate the parameters are in a linear regression the Ordinary Least Squares (OLS). When we would go on to the Generalized Addiditves Models, the method used for the parameter estimation would be the IRLS. 
-
-
 
 # Task 3
 ## 1.
@@ -145,7 +146,7 @@ The dependent variable is numeric. Therefore, it will be a regression problem. B
 
 ```{r ed_data, message=FALSE, warning=FALSE}
 
-# code from assignmnet
+# code from assignmnet 1
 ed_link <- "http://bit.ly/2nkCUEh" #changed to link
 
 top_row <- read_csv(ed_link, col_names = FALSE, n_max = 1)
@@ -186,7 +187,7 @@ daily_attendance_tidy <-  daily_attendance %>%
 daily_attendance_tidy[is.na(daily_attendance_tidy)] <- 0
 ```
 
-
+## 1. 
 ```{r}
 # to obtain the list of hospitals
 set.seed(123)# to get the same results
@@ -212,7 +213,6 @@ Margaret_ed <- daily_attendance_tidy%>%
 
 ## 2. 
 ```{r}
-require(lettuce)
 fit_linear <- lm(Attendance~date, data = Margaret_ed) 
 # linear regression
 summary(fit_linear)
@@ -235,16 +235,9 @@ plot(fit_linear$residuals)
 
 plot(fit_linear)
 ```
-From the regression output, It can be seen that the linear fit is really bad. Only 0.3% of the variation can be explained. by "date".
+From the regression output, It can be seen that the linear fit is really bad. Only 0.3% of the variation can be explained. by "date". This means over the course over a year there is no linear trend 
 
-The residualplots indicate that there is some seasonality that we are not capturing with this linear fit. So this linear regression is defenitely not good enough. A next step could be, if we want to continue with the linear models, to incroporate polynomials, that give more flexibility.
-```{r}
-fit_poly <- lm(Attendance~poly(date,4), data = Margaret_ed) 
-summary(fit_poly)
-plot(fit_poly)
-```
-The fit increased already dramatically. A vote for more flexibility.
-
+The residualplots indicate that there is some seasonality that we are not capturing with this linear fit. So this linear regression is defenitely not good enough.
 
 ## 3. 
 ```{r}
@@ -254,18 +247,17 @@ summary(fit_gam)
 plot(fit_gam, residuals = TRUE)
 gam.check(fit_gam)
 ```
-The fit increased and much more can be explained. The adjusted R-sqared is 0.412. But by just looking atthe residuals, it cannot be said that there is something way off - bad
-family = norma, since normally distributed value...
+The fit increased and much more can be explained. The residuals are nicely distributed around the estimate and the adjusted R-sqared is 0.412. But by looking at the residuals a bit closer, it seems that there is a repeated over-/underestimation. The distance between those point looks also the same. This could be an indication the there is a missed out (weekly) seasonality.
 
 
 ## 4.
  
 ```{r}
+# extract the weekdays. It is not defined which type, therefore I 
+# use the same (as.factor) as in the practical. The default is unordered
 Margaret_ed_week <- Margaret_ed%>%
   mutate(weekd = as.factor(weekdays(date)),
          num_date  =as.numeric(date))
-
-# str(Margaret_ed_week)
 
 fit_gam_week <- gam(Attendance ~s(num_date, by  = weekd) +weekd,
                     data = Margaret_ed_week)
@@ -277,9 +269,7 @@ AIC(fit_gam,fit_gam_week)
 plot(fit_gam_week, residuals = T)
 
 ```
-The AIC reveals that the second model, fit_gam_week has a better fit than the first model. 
-
-since as.factor, we stil lhave some kind of order 
+The AIC reveals that the second model, fit_gam_week has a better fit than the first model. It incrorporates the weekly seasonalities. The coefficients show how different the coefficients are for the different days of the week. 
 
 ## 5. 
 
@@ -288,21 +278,21 @@ since as.factor, we stil lhave some kind of order
 plot(fit_gam_week, residuals = T)
 gam.check(fit_gam_week)
 ```
-the residuals still look nicely distributed. 
-
+The residual histogram looks acceptable and also the other plots do not give any signs that there would be another pattern in the resiudals. 
 
 ## 6. 
+The variable is categorical. The default of as.factor is ordered = False. I assume that when we specify an ordered facor, then we loose some flexibility and thus have a worse fit. The numeric solution is also less flexible and should reseble the ordered one
 
 ```{r}
 # add the ordinal  and numeric
 Margaret_ed_week <- Margaret_ed%>%
-   mutate(weekd = as.character(weekdays(date)),
+   mutate(weekd = as.factor(weekdays(date)),
          weekd_or = factor(weekdays(date), order = T, levels = c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")),
          weekd_nu = lubridate::wday(date),
          num_date  =as.numeric(date))
 
 # character
-fit_gam_week <- gam(Attendance ~s(num_date) +weekd,
+fit_gam_week <- gam(Attendance ~s(num_date, by = weekd) +weekd,
                     data = Margaret_ed_week)
 summary(fit_gam_week)
 
@@ -321,13 +311,9 @@ summary(fit_gam_week_n)
 AIC(fit_gam_week,fit_gam_week_o,fit_gam_week_n)
 
 ```
-There is a big difference in between the models. The presumably unordered model is the best. But why?
-It makes sense that the ordered and the factors are similar. THey have the same order and with the structure and flexibility of gams, both capture the same structure. Therefore they are similar. But why is the first one the best? Does it allow the highest flexibility? 
+There is a big difference in between the models. The presumably unordered model is the best, as outlined.
 
-
-
-
-# Task 4 
+# Task 4 Heatwaves and ED demands 
 
 ## 1. The Definition of EHF
 The EHF is calculated in multiple steps and tries to capture and indicate heatwaves.
@@ -346,12 +332,54 @@ $EHF = max(0,EHI_{sign})*max(1,EHI_{accl})$
 
 
 Knowing this, additional data is required:
-* 30 additional days, so start is now 2013-06-01
+* 30 additional days, so start is now 2013-06-01 and end 2014-07-02
+
 * years 1971–200 to caclulate $T_{95}$
 
 
 ```{r merge_data}
 
+
+# the possible data are max, min, avg and precipitation
+# since it is not possible to request data longer than a year, this
+# ugly concat is necessary for the 30 previous days. Im not doing this again only for the last two days of NAs
+max_temp_daily_long <- data.frame(rbind(change_noaadate(ncdc(datasetid='GHCND',
+                       stationid='GHCND:ASN00009021',
+                       datatypeid='TMAX',
+                       startdate = '2013-06-01',
+                       enddate = '2013-06-30',
+                       limit=500)$data),max_temp_daily))
+min_temp_daily_long <- data.frame(rbind(change_noaadate(ncdc(datasetid='GHCND',
+                       stationid='GHCND:ASN00009021',
+                       datatypeid='TMIN',
+                       startdate = '2013-06-01',
+                       enddate = '2013-06-30',
+                       limit=500)$data),min_temp_daily))
+avg_temp_daily_long <- data.frame(rbind(change_noaadate(ncdc(datasetid='GHCND',
+                       stationid='GHCND:ASN00009021',
+                       datatypeid='TAVG', 
+                       startdate = '2013-06-01',
+                       enddate = '2013-06-30',
+                       limit=500)$data),avg_temp_daily))
+prec_daily_long <-data.frame(rbind(change_noaadate(ncdc(datasetid='GHCND',
+                  stationid='GHCND:ASN00009021',
+                  datatypeid='PRCP',
+                  startdate = '2013-06-01',
+                  enddate = '2013-06-30',
+                  limit=500)$data),prec_daily))
+
+
+
+#Not yet merging with margaret data - since then we would lose again the 30 days we added.
+weather_long <- max_temp_daily_long%>%
+  left_join(min_temp_daily_long,by = "date")%>%
+  left_join(avg_temp_daily_long,by = "date")%>%
+  left_join(prec_daily_long,by = "date")%>%
+  arrange(date)
+```
+
+calculate EHF
+```{r}
 calc_t95 <- function(timesspan){
   require(rnoaa)
   avg_temp <-  c()
@@ -366,6 +394,7 @@ calc_t95 <- function(timesspan){
                          enddate = end,
                          limit=500)$data
     if (length(avg_temp_daily)==0){
+      print(paste("missed:",i))
       next
     }
     avg_temp <- append(avg_temp, avg_temp_daily$value)
@@ -374,49 +403,7 @@ calc_t95 <- function(timesspan){
   }
 
 
-# the possible data are max, min, avg and precipitation
-max_temp_daily_long <- ncdc(datasetid='GHCND',
-                       stationid='GHCND:ASN00009021',
-                       datatypeid='TMAX',
-                       startdate = '2013-07-01',
-                       enddate = '2014-06-30',
-                       limit=500)$data
-min_temp_daily_long <- ncdc(datasetid='GHCND',
-                       stationid='GHCND:ASN00009021',
-                       datatypeid='TMIN',
-                       startdate = '2013-07-01',
-                       enddate = '2014-06-30',
-                       limit=500)$data
-avg_temp_daily_long <- ncdc(datasetid='GHCND',
-                       stationid='GHCND:ASN00009021',
-                       datatypeid='TAVG', 
-                       startdate = '2013-07-01',
-                       enddate = '2014-06-30',
-                       limit=500)$data
-prec_daily_long <-ncdc(datasetid='GHCND',
-                  stationid='GHCND:ASN00009021',
-                  datatypeid='PRCP',
-                  startdate = '2013-07-01',
-                  enddate = '2014-06-30', 
-                  limit=500)$data
-
-
-max_temp_daily_long <- change_noaadate(max_temp_daily_long)
-min_temp_daily_long <- change_noaadate(min_temp_daily_long)
-avg_temp_daily_long <- change_noaadate(avg_temp_daily_long)
-prec_daily_long <- change_noaadate(prec_daily_long)
-
-
-margaret_weather_long <- Margaret_ed_week%>%
-  mutate(date = dmy(Date))%>%
-  left_join(max_temp_daily_long,by = "date")%>%
-  left_join(min_temp_daily_long,by = "date")%>%
-  left_join(avg_temp_daily_long,by = "date")%>%
-  left_join(prec_daily_long,by = "date")%>%
-  arrange(date)
-
-
-calc_ehf <- function(df,timespan){
+calc_ehf <- function(df,timespan,version = "positive"){
   require(zoo)
   df$EHF <- 1
   
@@ -427,62 +414,72 @@ calc_ehf <- function(df,timespan){
   EHI_sig <- rolled_mean_f-t_95
   
   # EHI_accl
-  rolled_mean_b <- c(rep(NA,29), rollmean(df$TAVG[length(df$TAVG):1],30))
- EHI_accl <- rolled_mean_f/rolled_mean_b
- for (i in 1:365){
-  df$EHF[i] <- max(0,EHI_sig[i])*max(1,EHI_accl[i])
+  rolled_mean_b <- c(rep(NA,30),
+                     rollmeanr(lag(df$TAVG),30))
+ EHI_accl <- rolled_mean_f - rolled_mean_b
+ if (version == "positive"){
+  for (i in 1:nrow(df)){
+    df$EHF[i] = max(0,EHI_sig[i])*max(1,EHI_accl[i])
+    }
  }
+ if (version == "negative"){
+  for (i in 1:nrow(df)){
+    df$EHF[i] = EHI_sig[i]*max(1,EHI_accl[i])
+    }
+ }
+ 
  return(df) 
 }
 ```
 
 
-
 ```{r}
 
-timesspan <- 1970:2000
+timespan <- 1980:2010
 
-margaret_weather_EHF <- calc_ehf(margaret_weather_long, timesspan)
+# weather_EHF_positive <- calc_ehf(weather_long, timespan, version = "positive")
+weather_EHF_negative <- calc_ehf(weather_long, timespan, version = "negative")
 
-ggplot(margaret_weather_EHF, aes(x = date, y = EHF))+geom_line()
+
+# ggplot(weather_EHF, aes(x = date, y = EHF))+geom_line()
+
+ggplot() + 
+geom_line(data=weather_EHF_positive, aes(x = date, y = EHF), color='green') + 
+geom_line(data=weather_EHF_negative, aes(x = date, y = EHF), color='red')
+
+
 
 ```
+The "negative" EHF has more variation - therefore I will include this one in the model
+
 
 ## Task 4.2 
 
 ```{r}
+margaret_weather_EHF <-  Margaret_ed_week%>%
+  left_join(weather_EHF_negative, by = "date")
 
-fit_gam_ehf <- gam(Attendance ~s(num_date, by  = weekd) +weekd+s(EHF),
+fit_gam_ehf <- gam(Attendance ~s(num_date, by = weekd) +weekd+s(EHF),
                     data = margaret_weather_EHF)
 summary(fit_gam_ehf)
 
 AIC(fit_gam_week,fit_gam_ehf)
 
+plot(fit_gam_ehf)
 
 ```
 
 
 The EHF increases the fit again. The model performs better and can better explain the variation, as the AIC and the adj R-square confirm. 
+The coefficient of EHF increasis with increasing EHF.
 
-What is the coefficient? 
+The interpretation is that in heatwaves, we have more demand for ED. This covers with the expectations, which are that during heatwaves especially elderly people don't drink enough or have otherwise problems with the heat and therefore there is a higher demand for ED. 
 
-
-
-
-
-```{r, ed_weather}
-ed_weather_data%>%
-  mutate(week = strftime(date, format = "%V"))%>%
-  group_by(week)%>%
-  summarize(weekly_att=sum(Attendance))%>%
-  ggplot(aes(week,weekly_att, group =1))+
-  geom_line()+
-  theme(axis.text.x = element_text(angle = 45, size = 10))
-  
-```
 
 
 ## Task 4.3
+
+An extra variable would be the solar data. When the sun is directly shining on people, it can be that more people get sunburnt or have a sunstroke and need to get to the ED.
 
 ```{r sun_data}
 sun_daily <- read_csv("C:/Users/gwehrm/Documents/Repos/Deakin/Statistical/Data/IDCJAC0016_009021_1800_Data.csv")
@@ -494,32 +491,28 @@ sun_daily <- sun_daily%>%
   select(date, `Daily global solar exposure (MJ/m*m)`)%>%
   rename(solar = `Daily global solar exposure (MJ/m*m)`)
 
-margaret_weather_s <- Margaret_ed_week%>%
-  mutate(date = dmy(Date))%>%
-  left_join(max_temp_daily,by = "date")%>%
-  left_join(min_temp_daily,by = "date")%>%
-  left_join(avg_temp_daily,by = "date")%>%
-  left_join(prec_daily,by = "date")%>%
+margaret_weather_s <- margaret_weather_EHF%>%
   left_join(sun_daily, by = "date")%>%
   arrange(date)
 
-margaret_weather_s <- calc_ehf(margaret_weather_s)
 
-
-fit_gam_s <- gam(Attendance ~s(num_date, by  = weekd) +weekd+s(EHF)+s(solar)+s(TMIN),
+fit_gam_s <- gam(Attendance ~s(num_date, by = weekd) +weekd+s(EHF)+s(solar)+s(PRCP),
                     data = margaret_weather_s)
 summary(fit_gam_s)
 
 AIC(fit_gam_ehf,fit_gam_s)
 
+plot(fit_gam_s)
 
 
 ```
+It barely improves the fit of the model. this might be due to the fact, that EHF covers this already.
+
 
 # Task 5
 ## 1 limitations of historical data
 
-The Example of the EHF can show clearly some limitaitons. With increasing temperature more of the data will be labelled as heatwave, since as comparison historical data is used. Meanwhile people could adapt themselves to the increased heat and be therefore less sensitive to the EHF callculated with historical fata.
+The Example of the EHF can show some limitations. With increasing temperature more of the data will be labelled as heatwave, since as comparison historical data is used. So, at least for a while, the years will have maybe an overrepresentation of EHF. Since meanwhile people could adapt themselves to the increased heat and be therefore be less sensitive to the EHF callculated with historical data.
 
 ## 2. 
 Well originally the task was to predict the ED-demand. But given multiple factors, the understanding of the process should be more in the focus. One reason is that only data for a year is available. Also, the data is from 2014. As said in 1., a limitation of historical data is that the behaviour and the relation can change. The data is nearly six years old and therefore not suitable to use for predictions in 2019/2020.
@@ -530,12 +523,4 @@ But insights forom this models can be used to the incorporate features in the pr
 No not overall. The original task was to make predictions. None of it was done here. But the understanding og the relationship between the ED-demand and the temperature increased. It could be deduced that:
 * Weekly cycles
 * Yearly cycles
-* EHF big unfluence 
-
-
-
-
-
-
-
-
+* EHF big influence 
