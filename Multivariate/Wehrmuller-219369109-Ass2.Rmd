@@ -1,0 +1,70 @@
+---
+title: "Wehrmuller-219369109-Ass2"
+author: "Gabor Wehrmuller"
+date: "22/09/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(igraph)
+library(ggm)
+
+```
+
+
+## 1.5 
+
+```{r}
+
+dag <- DAG(W~J, P~W, U~P+D,M~U, S~J, V~S+A, D~V)
+
+drawGraph(dag, adjust = F)
+
+# a)
+dSep(dag,first = "W", second = "V", cond = c())
+
+# b)
+dSep(dag,first = "A", second = "M", cond = c("D","W"))
+
+# c)
+dSep(dag,first = c("A","W"), second = "D", cond = c("V"))
+
+```
+
+
+```{r}
+# biocLite is not available for r 3.6 - therefore usage of BiocManager to install the packeages
+library(RBGL)
+library(gRbase)
+library(gRain)
+library(Rgraphviz)
+
+lh <- c("low","high")
+lmmh <- c("low","lower middle","upper middle","high")
+
+eh <- cptable(~eh, values=c(3, 7), levels=lh) 
+
+oil.eh <- cptable(~oil|eh, values = c(3,7,4,6),levels = lh)
+
+bp.oil <- cptable(~bp|oil, values = c(20,45,30,5, 20,50,20,10),levels = lmmh)
+
+inf.oil.eh <- cptable(~inf|oil:eh, values = c(1,9,  6,4,  5,5,  4,6),levels = lh)
+
+rt.inf.eh <- cptable(~rt|inf:eh, values = c(2,8,  6,4,  7,3,   2,8), levels = lh)
+
+plist <- compileCPT(list(eh, oil.eh,bp.oil,inf.oil.eh,rt.inf.eh))
+plist 
+plist$rt
+plist$either 
+net <- grain(plist)
+plot(net)
+summary(net)
+
+querygrain(net, nodes = )
+
+
+```
+
+
+
