@@ -3,6 +3,7 @@ title: "Wehrmuller-219369109-Ass2"
 author: "Gabor Wehrmuller"
 date: "22/09/2019"
 output: pdf_document
+bibliography: library.bib
 ---
 
 ```{r setup, include=FALSE}
@@ -31,8 +32,12 @@ dSep(dag,first = "A", second = "M", cond = c("D","W"))
 dSep(dag,first = c("A","W"), second = "D", cond = c("V"))
 
 ```
+## 1.6
+done on paper
 
 
+# 2. 
+## 2.1 a)
 ```{r}
 # biocLite is not available for r 3.6 - therefore usage of BiocManager to install the packeages
 library(RBGL)
@@ -54,17 +59,152 @@ inf.oil.eh <- cptable(~inf|oil:eh, values = c(1,9,  6,4,  5,5,  4,6),levels = lh
 rt.inf.eh <- cptable(~rt|inf:eh, values = c(2,8,  6,4,  7,3,   2,8), levels = lh)
 
 plist <- compileCPT(list(eh, oil.eh,bp.oil,inf.oil.eh,rt.inf.eh))
-plist 
-plist$rt
-plist$either 
 net <- grain(plist)
 plot(net)
-summary(net)
-
-querygrain(net, nodes = )
 
 
 ```
 
+## 2.1 b)
+```{r}
+for (i in plist){
+  print("--------------------")
+  print(i)
+}
+```
 
 
+
+## 2.2 a)
+```{r}
+net_2 <- setEvidence(net,nodes = c("oil","ret"),states = c("low","low"))
+querygrain(net_2,nodes = "bp")
+```
+The most likely state is "middle". 
+
+## 2.2 b)
+```{r}
+net_3 <- setEvidence(net,nodes = "inf",states = "low")
+querygrain(net_3,nodes = "rt")
+```
+the probability that the retailer stock pris is high is 45.24%
+
+## 2.2 c)
+```{r}
+querygrain(net, nodes = "oil", type = "marginal")
+```
+
+## 2.2 d)
+```{r}
+querygrain(net, nodes = c("inf", "bp"), type = "joint")
+```
+
+# Q3
+
+difficult...
+
+# Q4
+
+```{r}
+ChildData <- read.csv(file="CHILD10k.csv", header=TRUE, sep=",")
+
+library(bnlearn)
+#create and plot the network structure.
+modelstring = paste0("[BirthAsphyxia][Disease|BirthAsphyxia][LVH|Disease][DuctFlow|Disease]",
+"[CardiacMixing|Disease][LungParench|Disease][LungFlow|Disease][Sick|Disease]",
+"[HypDistrib|DuctFlow:CardiacMixing][HypoxiaInO2|CardiacMixing:LungParench]",
+"[CO2|LungParench][ChestXray|LungParench:LungFlow][Grunting|LungParench:Sick]",
+"[LVHreport|LVH][Age|Disease:Sick][LowerBodyO2|HypDistrib:HypoxiaInO2]",
+"[RUQO2|HypoxiaInO2][CO2Report|CO2][XrayReport|ChestXray][GruntingReport|Grunting]")
+dag = model2network(modelstring)
+par(mfrow = c(1,1))
+#source("https://bioconductor.org/biocLite.R")
+#biocLite("Rgraphviz")
+graphviz.plot(dag)
+```
+
+## 4.1)
+
+```{r}
+for (i in c(100,500,1000,5000)){
+  bnet_bic = hc(ChildData[1:i,], score = "bic") 
+  bnet_bde = hc(ChildData[1:i,], score = "bde")
+  score_bic = score(bnet_bic, ChildData[1:i,], type = "bic")
+  score_bde = score(bnet_bde, ChildData[1:i,], type = "bde")
+  
+  graphviz.plot(bnet_bic, main = paste("\nBayesian Network (score = BIC) with the first", i, "Observations"), sub = paste("BIC:",score_bic))
+  graphviz.plot(bnet_bde, main = paste("\nBayesian Network (score = BDE) with the first", i, "Observations"), sub = paste("BDE:",score_bde))
+
+}
+
+
+
+```
+
+## 4.2)
+
+The BIC score increases linearily with sample size. With more samples, the incentive to fit the exact structure of the data increases. This means that with increasing data size, the structure gets more complex, which lowers the score again. This can be observed as well in the plots.
+
+The BDE scores increases as well with sample size. With low sample size, the score tends to favor simpler structures. As more data can be used, more complex structures are also taken into cionisderation. This can be seen that again with more data, the structure gets more complex. 
+
+## 4.3)
+
+### a)
+```{r}
+bnet_bic_full <- hc(ChildData, score = "bic")
+bnet_bde_full <- hc(ChildData, score = "bde")
+
+score_bic_full = score(bnet_bic_full, ChildData, type = "bic")
+score_bde_full = score(bnet_bde_full, ChildData, type = "bde")
+  
+graphviz.plot(bnet_bic_full, main = paste("\nBayesian Network (score = BIC)"), sub = paste("BIC:",score_bic_full))
+graphviz.plot(bnet_bde_full, main = paste("\nBayesian Network (score = BDE)"), sub = paste("BDE:",score_bde_full))
+
+
+
+```
+
+### b)
+```{r}
+
+par(mfrow = c(1,2))
+for (i in c(100,500,1000,5000)){
+  assign(paste0("bnet_bic_",i), hc(ChildData[1:i,], score = "bic")) 
+  assign(paste0("bnet_bde_",i),hc(ChildData[1:i,], score = "bde"))
+  }
+
+  # compare(bnet_bic_full,bnet_bic)
+  graphviz.compare(bnet_bic_full,bnet_bic_100,bnet_bic_500,bnet_bic_1000,bnet_bic_5000,main = c("Full (BIC)", "100", "500","1000","5000"))
+  
+  
+  # compare(bnet_bde_full,bnet_bde)
+  graphviz.compare(bnet_bde_full,bnet_bde_100,bnet_bde_500,bnet_bde_1000,bnet_bde_5000,main = c("Full (BNE)", "100", "500","1000","5000"))
+  
+```
+
+Incentive is in both cases to draw less complex structures with limited date. Hence, as observed, with increasing number of datapoints the differences between the full and the sub-models decrease. 
+
+
+
+### c) 
+
+```{r}
+fitted_param = bn.fit(bnet_bic_full, ChildData)
+fitted_param
+```
+
+### d)
+
+```{r}
+cpquery(fitted_param, event = (Disease =="Lung"), evidence = ((CO2=="High") & (LungParench =="Abnormal")))
+
+```
+The probability is 0.17
+
+
+
+# Q5)
+
+A Bayesian Network is used by the US Military for Compat Equipment Diagnostics. The military, or the be more precise the man in the field face the problem that at certain times they need to act quick and need to fully rely on their equipment. So, in case a vital element, like a truck, needs maintenance, this needs to be done as quick as possible. An expereinced technician, that can easily repair this might not arrive within days. So, a causal Bayesian Network (DAG) that holds expert knowledge was developed. It helps and gives guidance for the soldiers to repair the equipment. This method was chosen, since it allows to easily illustrate complex relationships and visualises the causal path structures easily understandable @Aebischer2017. 
+
+# References
