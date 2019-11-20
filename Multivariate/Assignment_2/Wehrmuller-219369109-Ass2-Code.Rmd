@@ -110,10 +110,10 @@ dSep(dag,first = c("A","W"), second = "D", cond = c("V"))
 \newpage
 ## 1.6
 
-$P(M|S=3000-6000,V=Yes, P=Peakhour,D = <1)\\Order: J,W,A,U\\ P(M|S=3000-6000,V=Yes, P=Peakhour,D = <1) = \frac{P(M, S=3000-6000,V=Yes, P=Peakhour,D = <1)}{P(S=3000-6000,V=Yes, P=Peakhour,D = <1)}\\P(M,S,V,P,D= \sum_{J,W,A,U}P(J)P(A)P(W|J)P(P|W)P(U|P,D)P(M|U)P(S|J)P(V|S,A)P(D|V)\\ =\sum_{J,W,A,U}f_0(A)f_1(J)f_2(W,J)f_3(P,W)f_4(V,P,D)f_5(M,U)f_6(S,J)f_7(V,S,A)f_8(D,V)\\Observe\; S=3000-6000,V=Yes, P=Peakhour,D = <1\\=\sum_{J,W,A,U}f_0(A)f_1(J)f_2(W,J)f_9(W)f_5(M,U)f_{10}(J)f_{11}(A)\\Eliminate \;J\\=\sum_{W,A,U}f_0(A)f_9(W)f_5(M,U)f_{11}(A)\sum_Jf_1(J)f_2(W,J)f_{10}(J)\\ = \sum_{W,A,U}f_0(A)f_9(W)f_5(M,U)f_{11}(A)f_2(W)\\Eliminate\;W\\ =\sum_{A,U}f_0(A)f_5(M,U)f_{11}(A)\sum_Wf_9(W)f_2(W)\\=\sum_{A,U}f_0(A)f_5(M,U)f_{11}(A)\\Eliminate \;A\\= \sum_Uf_5(M,U)\sum_Af_9(A)f_2(A)\\=\sum_Uf_5(M,U)\\Eliminate\;U\\=f_5(M)\\The \;posterior \;distribution:\\P(M|S=3000-6000,V=Yes, P=Peakhour,D = <1)=\frac{f_5(M)}{\sum_Mf_5(M)}$
+$P(M|S=3000-6000,V=Yes, P=Peakhour,D = <1)\\Order: J,W,A,U\\ P(M|S=3000-6000,V=Yes, P=Peakhour,D = <1) = \frac{P(M, S=3000-6000,V=Yes, P=Peakhour,D = <1)}{P(S=3000-6000,V=Yes, P=Peakhour,D = <1)}\\P(M,S,V,P,D= \sum_{J,W,A,U}P(J)P(A)P(W|J)P(P|W)P(U|P,D)P(M|U)P(S|J)P(V|S,A)P(D|V)\\ =\sum_{J,W,A,U}f_0(A)f_1(J)f_2(W,J)f_3(P,W)f_4(V,P,D)f_5(M,U)f_6(S,J)f_7(V,S,A)f_8(D,V)\\Observe\; S=3000-6000,V=Yes, P=Peakhour,D = <1\\=\sum_{J,W,A,U}f_0(A)f_1(J)f_2(W,J)f_9(W)f_5(M,U)f_{10}(J)f_{11}(A)\\Eliminate \;J\\=\sum_{W,A,U}f_0(A)f_9(W)f_5(M,U)f_{11}(A)\sum_Jf_1(J)f_2(W,J)f_{10}(J)\\ = \sum_{W,A,U}f_0(A)f_9(W)f_5(M,U)f_{11}(A)f_2(W)\\Eliminate\;W\\ =\sum_{A,U}f_0(A)f_5(M,U)f_{11}(A)\sum_Wf_9(W)f_2(W)\\=\sum_{A,U}f_0(A)f_5(M,U)f_{11}(A)\\Eliminate \;A\\= \sum_Uf_5(M,U)\sum_Af_0(A)f_{11}(A)\\=\sum_Uf_5(M,U)\\Eliminate\;U\\=f_5(M)\\The \;posterior \;distribution:\\P(M|S=3000-6000,V=Yes, P=Peakhour,D = <1)=\frac{f_5(M)}{\sum_Mf_5(M)}$
 
 
-# 2. 
+# Q2) 
 ## 2.1 a)
 ```{r 2.1, message=FALSE, warning=FALSE}
 # biocLite is not available for r 3.6 - therefore usage of BiocManager to install the packeages
@@ -183,11 +183,11 @@ $P(A,B)=\sum_{C,E,D}P(A,B,C,D,E)\\=\sum_{C,E,D}P(A)P(B)P(C|A,B)P(E|C)P(D|C)\\=\s
 
 A and B are d-separated by C, since the path is blocked by head-to-head edges. 
 
+\newpage
+
 ## 3.2)
 
-
-
-$\frac{P(E=1,A=1,B=0)}{P(A=1,B=0)}= \frac{\sum_{C,D}(E=1,A=1,B=0,C,D)}{P(A=1,B=0)}\\\sum_{C,D}(E=1,A=1,B=0,C,D)=P(A=1),P(B=0)P(C|A=1,B=0)P(E=1|C)P(D|C)\\summarize \;through\;C\;and\;D:\\ P(A=1)P(B=0) [\\P(C=0|A=1,B=0)P(E=1|C=0)P(D=0|C=0)+\\P(C=0|A=1,B=0)P(E=1|C=0)P(D=1|C=0)+\\P(C=1|A=1,B=0)P(E=1|C=1)P(D=0|C=1)+\\P(C=1|A=1,B=0)P(E=1|C=1)P(D=1|C=1)]\\=(1-\alpha)(\theta)[\\(0.2)(1-\beta)(\gamma)+\\(0.2)(1-\beta)(1-\gamma)+\\(0.8)(0.7)(0.6)+\\(0.8)(0.7)(0.4)]\\=(1-\alpha)(\theta)(0.76-0.2\beta)\\$ 
+$\frac{P(E=1,A=1,B=0)}{P(A=1,B=0)}= \frac{\sum_{C,D}P(E=1,A=1,B=0,C,D)}{P(A=1,B=0)}\\\sum_{C,D}P(E=1,A=1,B=0,C,D)=P(A=1),P(B=0)P(C|A=1,B=0)P(E=1|C)P(D|C)\\summarize \;through\;C\;and\;D:\\ P(A=1)P(B=0) [\\P(C=0|A=1,B=0)P(E=1|C=0)P(D=0|C=0)+\\P(C=0|A=1,B=0)P(E=1|C=0)P(D=1|C=0)+\\P(C=1|A=1,B=0)P(E=1|C=1)P(D=0|C=1)+\\P(C=1|A=1,B=0)P(E=1|C=1)P(D=1|C=1)]\\=(1-\alpha)(\theta)[\\(0.2)(1-\beta)(\gamma)+\\(0.2)(1-\beta)(1-\gamma)+\\(0.8)(0.7)(0.6)+\\(0.8)(0.7)(0.4)]\\=(1-\alpha)(\theta)(0.76-0.2\beta)\\$ 
 
 In 3.1 it is shown that:  
 $P(A,B)=P(A)P(B)\;,therefore:\\P(A=1,B=0)=P(A=1)P(B=0)\\=(1-\alpha)(\theta)$
@@ -242,8 +242,11 @@ for (i in c(100,500,1000,5000)){
   score_bic = bnlearn::score(bnet_bic, ChildData[1:i,], type = "bic")
   score_bde = bnlearn::score(bnet_bde, ChildData[1:i,], type = "bde")
   
-  graphviz.plot(bnet_bic, main = paste("\nBayesian Network (score = BIC) with the first", i, "Observations"), sub = paste("BIC-Score:",score_bic))
-  graphviz.plot(bnet_bde, main = paste("\nBayesian Network (score = BDE) with the first", i, "Observations"), sub = paste("BDE-Score:",score_bde))
+  graphviz.plot(bnet_bic,
+                main = paste("\nBayesian Network (score = BIC) with the first", i, "Observations"),
+                sub = paste("BIC-Score:",score_bic))
+  graphviz.plot(bnet_bde, main = paste("\nBayesian Network (score = BDE) with the first", i, "Observations"),
+                sub = paste("BDE-Score:",score_bde))
 
 }
 
@@ -282,11 +285,13 @@ for (i in c(100,500,1000,5000)){
   }
 
   # compare(bnet.bic.full,bnet.bic)
-graphviz.compare(bnet.bic.full,bnet.bic100,bnet.bic500,bnet.bic1000,bnet.bic5000,main = c("Full (BIC)", "100", "500","1000","5000"))
+graphviz.compare(bnet.bic.full,bnet.bic100,bnet.bic500,bnet.bic1000,bnet.bic5000,
+                 main = c("Full (BIC)", "100", "500","1000","5000"))
   
   
   # compare(bnet.bde.full,bnet.bde)
-graphviz.compare(bnet.bde.full,bnet.bde100,bnet.bde500,bnet.bde1000,bnet.bde5000,main = c("Full (BNE)", "100", "500","1000","5000"))
+graphviz.compare(bnet.bde.full,bnet.bde100,bnet.bde500,bnet.bde1000,bnet.bde5000,
+                 main = c("Full (BNE)", "100", "500","1000","5000"))
   
 ```
 
@@ -297,14 +302,17 @@ Incentive is in both cases to draw less complex structures with limited data. Wi
 ### 4.3 c) 
 
 ```{r}
-fitted.param = bn.fit(bnet.bic.full, ChildData)
+fitted.param = bn.fit(bnet.bic.full,
+                      ChildData)
 fitted.param
 ```
 
 ### 4.3 d)
 
 ```{r}
-cpquery(fitted.param, event = (Disease =="Lung"), evidence = ((CO2=="High") & (LungParench =="Abnormal")))
+cpquery(fitted.param,
+        event = (Disease =="Lung"),
+        evidence = ((CO2=="High") & (LungParench =="Abnormal")))
 
 ```
 The probability is 0.17
@@ -313,9 +321,9 @@ The probability is 0.17
 
 # Q5)
 
-A Bayesian Network is used by the US Military for Compat Equipment Diagnostics. The military, or the be more precise the man in the field face the problem that at certain times they need to act quick and need to fully rely on their equipment. So, in case a vital element, like a truck, needs maintenance, this needs to be done as quick as possible. An expereinced technician, that can easily repair this might not arrive within days. So, a causal Bayesian Network (DAG) that holds expert knowledge was developed. It helps and gives guidance for the soldiers to repair the equipment. This method was chosen, since it allows to easily illustrate complex relationships and visualises the causal path structures easily understandable @Aebischer2017. 
+A Bayesian Network is used by the US Military for Combat Equipment Diagnostics. The military, or the be more precise the man in the field, face the problem that at certain times they need to act quick and need to fully rely on their equipment. So, in case a vital element, like a truck, needs maintenance, this needs to be done as quickly as possible. An experienced technician, that can easily repair this might not arrive within days. So, a causal Bayesian Network (DAG) that holds expert knowledge was developed. It helps and gives guidance for the soldiers to repair the equipment. This method was chosen, since it allows to easily illustrate complex relationships and visualises the causal path structures easily understandable for the soldiers @Aebischer2017. 
 
 
-In the second application, the bayes theorem is used to evaluate the performance of depression tests. It is described that the usage of frequentists tests underestimates the possibility of misclassifications based on cutoffs. By using the Bayes theorem they evaluate the tests newly and get the results that besides one test, none of them reaches a statisfactory level of diagnostic accuracy. The best test uses a newer procedure to select the best items. This paper encourages to use this method in the future to select the items and have a higher diagnostic accuracy @Tommasi2018.  
+In the second application, the Bayes theorem is used to evaluate the performance of depression tests. The problem is that these diagnoses need to be as correct as possible. But these tests are often not that correct. To improve the accuracy of these test, multiples are combined. However, It is described that the usage of frequentists tests underestimates the possibility of misclassifications based on cut-offs. They only consider the risk of False Positives. By using the Bayes theorem, Aebischer et al. evaluate the tests newly. The result is that all besides one, reaches a satisfactory level of diagnostic accuracy. This best test uses a newer procedure to select the items. Thanks to the Bayes Theorem it could be shown that this method should be used to select the items, since they give a higher diagnostic accuracy @Tommasi2018.  
 
 # References
